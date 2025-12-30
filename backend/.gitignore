@@ -1,0 +1,17 @@
+# env files
+.env
+.env.*
+!.env.example
+
+# node / pnpm
+node_modules
+.pnpm-store
+dist
+build
+coverage
+
+# logs
+*.log
+
+# macOS
+.DS_Store

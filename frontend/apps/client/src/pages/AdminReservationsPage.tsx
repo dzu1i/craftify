@@ -1,0 +1,214 @@
+import { useEffect, useMemo, useState } from "react";
+import { LayoutDashboard, LogOut, Calendar, Trash2, Loader2, User } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { reservationApi, type Reservation } from "../lib/api";
+import { supabase } from "../lib/supabase";
+
+export default function AdminReservationsPage() {
+  const navigate = useNavigate();
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // ✅ filter
+  const [filter, setFilter] = useState<"all" | "booked">("all");
+
+  const fetchReservations = async () => {
+    try {
+      setIsLoading(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        setReservations([]);
+        navigate("/");
+        return;
+      }
+
+      const data = await reservationApi.listReservations(token);
+      setReservations(data);
+    } catch (err) {
+      console.error("Failed to load reservations", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReservations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const filteredReservations = useMemo(() => {
+    if (filter === "booked") return reservations.filter((r) => r.status === "booked");
+    return reservations;
+  }, [reservations, filter]);
+
+  const handleCancel = async (id: string) => {
+    if (!window.confirm("Opravdu chcete zrušit tuto rezervaci?")) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        alert("Chybí přihlášení (token)");
+        navigate("/");
+        return;
+      }
+
+      await reservationApi.adminCancelReservation(token, id);
+      await fetchReservations();
+    } catch (err) {
+      console.error(err);
+      alert("Chyba při rušení rezervace.");
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
+
+  return (
+    <div className="flex h-screen bg-gray-50 font-sans">
+      {/* SIDEBAR */}
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full z-10">
+        <div className="p-6 flex items-center gap-3">
+          <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center text-white font-bold">
+            C
+          </div>
+          <h1 className="font-bold text-gray-900 uppercase tracking-tight">Craftify Admin</h1>
+        </div>
+
+        <nav className="flex-1 px-4 space-y-1">
+          <Link
+            to="/admin"
+            className="flex items-center gap-3 w-full px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg text-sm font-medium transition-colors"
+          >
+            <LayoutDashboard className="w-5 h-5" /> Create a new class
+          </Link>
+
+          <Link
+            to="/admin/reservations"
+            className="flex items-center gap-3 w-full px-4 py-3 bg-orange-50 text-orange-600 rounded-lg text-sm font-medium"
+          >
+            <Calendar className="w-5 h-5" /> Reservations
+          </Link>
+
+          {/* ✅ link zpátky do user části */}
+          <Link
+            to="/home"
+            className="flex items-center gap-3 w-full px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg text-sm font-medium transition-colors"
+          >
+            <User className="w-5 h-5" /> User dashboard
+          </Link>
+        </nav>
+
+        <div className="p-4 border-t">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 w-full px-4 py-3 text-gray-400 hover:text-red-600 text-sm font-medium transition-colors"
+          >
+            <LogOut className="w-5 h-5" /> Log out
+          </button>
+        </div>
+      </aside>
+
+      <main className="flex-1 ml-64 p-8 overflow-auto">
+        <div className="mb-8 flex justify-between items-end">
+          <div>
+            <h2 className="text-3xl font-black text-gray-900">Reservations</h2>
+            <p className="text-sm text-gray-400 mt-1">
+              Showing {filteredReservations.length} / {reservations.length}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* ✅ filter buttons */}
+            <button
+              onClick={() => setFilter("all")}
+              className={`px-4 py-2 rounded-xl text-sm font-bold border transition-colors ${
+                filter === "all"
+                  ? "bg-orange-500 text-white border-orange-500"
+                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setFilter("booked")}
+              className={`px-4 py-2 rounded-xl text-sm font-bold border transition-colors ${
+                filter === "booked"
+                  ? "bg-orange-500 text-white border-orange-500"
+                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              Booked only
+            </button>
+
+            {isLoading && <Loader2 className="animate-spin text-orange-500 w-6 h-6" />}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              <tr>
+                <th className="px-8 py-5">Workshop ID</th>
+                <th className="px-8 py-5">Customer</th>
+                <th className="px-8 py-5">Status</th>
+                <th className="px-8 py-5 text-right">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-gray-50">
+              {filteredReservations.map((r) => {
+                const isCanceled = r.status === "canceled";
+
+                return (
+                  <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-8 py-5 text-sm font-mono text-gray-400">
+                      {r.timeSlotId.substring(0, 8)}...
+                    </td>
+
+                    <td className="px-8 py-5 text-sm font-bold text-gray-900">{r.userId}</td>
+
+                    <td className="px-8 py-5">
+                      <span
+                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                          isCanceled ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+                        }`}
+                      >
+                        {r.status}
+                      </span>
+                    </td>
+
+                    <td className="px-8 py-5 text-right">
+                      <button
+                        onClick={() => handleCancel(r.id)}
+                        className={`transition-colors ${
+                          isCanceled
+                            ? "text-gray-200 cursor-not-allowed"
+                            : "text-gray-300 hover:text-red-600"
+                        }`}
+                        title={isCanceled ? "Already canceled" : "Cancel reservation"}
+                        disabled={isCanceled || isLoading}
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {filteredReservations.length === 0 && !isLoading && (
+            <div className="p-20 text-center text-gray-400 text-sm">No reservations found.</div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

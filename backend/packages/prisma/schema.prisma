@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  classTypes ClassType[]
+  createdAt DateTime  @default(now())
+}
+
+model ClassType {
+  id          String    @id @default(cuid())
+  name        String
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id])
+  timeSlots   TimeSlot[]
+  createdAt   DateTime  @default(now())
+
+  @@index([categoryId])
+}
+
+model Venue {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  city      String?
+  timeSlots TimeSlot[]
+  createdAt DateTime @default(now())
+}
+
+enum TimeSlotStatus {
+  draft
+  published
+  hidden
+  closed
+}
+
+model TimeSlot {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  classTypeId String
+  venueId     String
+  startAt     DateTime
+  endAt       DateTime
+  capacity    Int
+  price       Int
+  status      TimeSlotStatus @default(draft)
+  createdAt   DateTime       @default(now())
+
+  classType   ClassType      @relation(fields: [classTypeId], references: [id])
+  venue       Venue          @relation(fields: [venueId], references: [id])
+  reservations Reservation[]
+
+  @@index([startAt])
+  @@index([status])
+}
+
+enum ReservationStatus {
+  booked
+  canceled
+}
+
+enum UserRoleType {
+  USER
+  LECTOR
+  ADMIN
+}
+
+model UserRole {
+  userId    String       @id
+  role      UserRoleType @default(USER)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model CustomerProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  email     String?
+  fullName  String?
+  createdAt DateTime @default(now())
+}
+
+model Reservation {
+  id          String            @id @default(cuid())
+  userId      String
+  timeSlotId  String
+  status      ReservationStatus @default(booked)
+  createdAt   DateTime          @default(now())
+
+  timeSlot    TimeSlot          @relation(fields: [timeSlotId], references: [id])
+
+  @@index([userId])
+  @@index([timeSlotId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  actorId   String?
+  entity    String?
+  entityId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@map("audit_log")
+}

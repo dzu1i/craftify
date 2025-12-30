@@ -1,0 +1,17 @@
+{
+  "name": "craftify-backend",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev:catalog": "pnpm --filter catalog-svc dev",
+    "dev:reservation": "pnpm --filter reservation-svc dev",
+    "dev:all": "pnpm dev:catalog & pnpm dev:reservation"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/dotenv": "^8.2.3",
+    "@types/express": "^4.17.25",
+    "@types/node": "^20.19.25",
+    "prisma": "^5.22.0"
+  }
+}
