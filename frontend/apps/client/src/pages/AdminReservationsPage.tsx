@@ -4,19 +4,39 @@ import { useNavigate, Link } from "react-router-dom";
 import { reservationApi, type Reservation } from "../lib/api";
 import { supabase } from "../lib/supabase";
 
+function formatDateTime(value?: string | null) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+
+  return d.toLocaleString("cs-CZ", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function shortId(id?: string | null) {
+  if (!id) return "";
+  return id.length > 10 ? `${id.slice(0, 8)}…` : id;
+}
+
 export default function AdminReservationsPage() {
   const navigate = useNavigate();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ✅ filter
   const [filter, setFilter] = useState<"all" | "booked">("all");
 
   const fetchReservations = async () => {
     try {
       setIsLoading(true);
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token;
 
       if (!token) {
@@ -44,11 +64,16 @@ export default function AdminReservationsPage() {
     return reservations;
   }, [reservations, filter]);
 
+  const getCustomerLabel = (r: Reservation) =>
+    r.customer?.email?.trim() || r.customer?.fullName?.trim() || r.userId;
+
   const handleCancel = async (id: string) => {
     if (!window.confirm("Opravdu chcete zrušit tuto rezervaci?")) return;
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token;
 
       if (!token) {
@@ -96,7 +121,6 @@ export default function AdminReservationsPage() {
             <Calendar className="w-5 h-5" /> Reservations
           </Link>
 
-          {/* ✅ link zpátky do user části */}
           <Link
             to="/home"
             className="flex items-center gap-3 w-full px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg text-sm font-medium transition-colors"
@@ -125,7 +149,6 @@ export default function AdminReservationsPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* ✅ filter buttons */}
             <button
               onClick={() => setFilter("all")}
               className={`px-4 py-2 rounded-xl text-sm font-bold border transition-colors ${
@@ -136,6 +159,7 @@ export default function AdminReservationsPage() {
             >
               All
             </button>
+
             <button
               onClick={() => setFilter("booked")}
               className={`px-4 py-2 rounded-xl text-sm font-bold border transition-colors ${
@@ -155,7 +179,8 @@ export default function AdminReservationsPage() {
           <table className="w-full text-left">
             <thead className="bg-gray-50 border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
               <tr>
-                <th className="px-8 py-5">Workshop ID</th>
+                <th className="px-8 py-5">Category</th>
+                <th className="px-8 py-5">Class type</th>
                 <th className="px-8 py-5">Customer</th>
                 <th className="px-8 py-5">Status</th>
                 <th className="px-8 py-5 text-right">Actions</th>
@@ -166,15 +191,40 @@ export default function AdminReservationsPage() {
               {filteredReservations.map((r) => {
                 const isCanceled = r.status === "canceled";
 
+                const categoryName = r.timeSlot?.classType?.category?.name ?? "—";
+                const classTypeName = r.timeSlot?.classType?.name ?? "—";
+                const eventTitle = r.timeSlot?.title ?? null;
+                const startAt = formatDateTime(r.timeSlot?.startAt ?? null);
+
+                const customerLabel = getCustomerLabel(r);
+                const hasEmailOrName = Boolean(r.customer?.email || r.customer?.fullName);
+
                 return (
                   <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-8 py-5 text-sm font-mono text-gray-400">
-                      {r.timeSlotId.substring(0, 8)}...
+                    <td className="px-8 py-5 align-top">
+                      <div className="text-sm font-bold text-gray-900">{categoryName}</div>
+                      <div className="text-xs text-gray-400 mt-1 font-mono">{shortId(r.timeSlotId)}</div>
                     </td>
 
-                    <td className="px-8 py-5 text-sm font-bold text-gray-900">{r.userId}</td>
+                    <td className="px-8 py-5 align-top">
+                      <div className="text-sm font-semibold text-gray-900">{classTypeName}</div>
 
-                    <td className="px-8 py-5">
+                      {eventTitle && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {eventTitle}
+                          {startAt ? <span className="text-gray-400"> · {startAt}</span> : null}
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="px-8 py-5 align-top">
+                      <div className="text-sm font-bold text-gray-900">{customerLabel}</div>
+                      {!hasEmailOrName && (
+                        <div className="text-xs text-gray-400 mt-1 font-mono">{shortId(r.userId)}</div>
+                      )}
+                    </td>
+
+                    <td className="px-8 py-5 align-top">
                       <span
                         className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
                           isCanceled ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
@@ -184,7 +234,7 @@ export default function AdminReservationsPage() {
                       </span>
                     </td>
 
-                    <td className="px-8 py-5 text-right">
+                    <td className="px-8 py-5 text-right align-top">
                       <button
                         onClick={() => handleCancel(r.id)}
                         className={`transition-colors ${

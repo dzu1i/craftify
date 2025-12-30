@@ -5,6 +5,38 @@ import { requireAdmin, requireLectorOrAdmin } from "../middleware/roles";
 
 const router = Router();
 
+// Ensure FE always gets category + classType + customer email/fullName
+const reservationInclude = {
+  customer: {
+    select: {
+      userId: true,
+      email: true,
+      fullName: true,
+    },
+  },
+  timeSlot: {
+    include: {
+      venue: true,
+      classType: {
+        include: {
+          category: true,
+        },
+      },
+    },
+  },
+} as const;
+
+// Upsert customer profile when we know the user's email (from JWT / Supabase userinfo)
+async function syncCustomerProfile(userId: string, email?: string) {
+  if (!email) return;
+
+  await prisma.customerProfile.upsert({
+    where: { userId },
+    update: { email },
+    create: { userId, email },
+  });
+}
+
 /**
  * GET /reservations
  * Staff – list reservations (filters)
@@ -19,7 +51,7 @@ router.get("/", requireAuth, requireLectorOrAdmin, async (req, res) => {
       ...(userId ? { userId: String(userId) } : {}),
       ...(status ? { status: String(status) as any } : {}),
     },
-    include: { timeSlot: true },
+    include: reservationInclude,
     orderBy: { createdAt: "desc" },
   });
 
@@ -39,7 +71,7 @@ router.get(
 
     const reservations = await prisma.reservation.findMany({
       where: { timeSlotId },
-      include: { timeSlot: true },
+      include: reservationInclude,
       orderBy: { createdAt: "desc" },
     });
 
@@ -54,9 +86,12 @@ router.get(
 router.get("/me", requireAuth, async (req, res) => {
   const userId = req.user!.id;
 
+  // ✅ auto-fill customer email whenever user hits their reservations
+  await syncCustomerProfile(userId, req.user?.email);
+
   const reservations = await prisma.reservation.findMany({
     where: { userId },
-    include: { timeSlot: true },
+    include: reservationInclude,
     orderBy: { createdAt: "desc" },
   });
 
@@ -73,7 +108,7 @@ router.get("/:id", requireAuth, requireLectorOrAdmin, async (req, res) => {
 
   const reservation = await prisma.reservation.findUnique({
     where: { id },
-    include: { timeSlot: true },
+    include: reservationInclude,
   });
 
   if (!reservation) return res.status(404).json({ error: "Reservation not found" });
@@ -93,6 +128,9 @@ router.post("/", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "timeSlotId is required" });
   }
 
+  // ✅ auto-fill customer email on create
+  await syncCustomerProfile(userId, req.user?.email);
+
   // prevent duplicate booking for same user + same slot
   const existing = await prisma.reservation.findFirst({
     where: { userId, timeSlotId, status: "booked" },
@@ -100,9 +138,7 @@ router.post("/", requireAuth, async (req, res) => {
   });
 
   if (existing) {
-    return res
-      .status(409)
-      .json({ error: "You already have a reservation for this event" });
+    return res.status(409).json({ error: "You already have a reservation for this event" });
   }
 
   // check capacity
@@ -125,11 +161,8 @@ router.post("/", requireAuth, async (req, res) => {
   }
 
   const reservation = await prisma.reservation.create({
-    data: {
-      userId,
-      timeSlotId,
-      status: "booked",
-    },
+    data: { userId, timeSlotId, status: "booked" },
+    include: reservationInclude,
   });
 
   res.status(201).json(reservation);
@@ -146,12 +179,18 @@ router.patch("/:id/admin-cancel", requireAuth, requireAdmin, async (req, res) =>
   if (!reservation) return res.status(404).json({ error: "Reservation not found" });
 
   if (reservation.status === "canceled") {
-    return res.json(reservation); // idempotent
+    // return full object in the same shape
+    const again = await prisma.reservation.findUnique({
+      where: { id },
+      include: reservationInclude,
+    });
+    return res.json(again);
   }
 
   const updated = await prisma.reservation.update({
     where: { id },
     data: { status: "canceled" },
+    include: reservationInclude,
   });
 
   res.json(updated);
@@ -165,9 +204,10 @@ router.patch("/:id/cancel", requireAuth, async (req, res) => {
   const userId = req.user!.id;
   const { id } = req.params;
 
-  const reservation = await prisma.reservation.findUnique({
-    where: { id },
-  });
+  // ✅ keep profile email up-to-date
+  await syncCustomerProfile(userId, req.user?.email);
+
+  const reservation = await prisma.reservation.findUnique({ where: { id } });
 
   if (!reservation || reservation.userId !== userId) {
     return res.status(404).json({ error: "Reservation not found" });
@@ -176,6 +216,7 @@ router.patch("/:id/cancel", requireAuth, async (req, res) => {
   const updated = await prisma.reservation.update({
     where: { id },
     data: { status: "canceled" },
+    include: reservationInclude,
   });
 
   res.json(updated);
@@ -184,9 +225,6 @@ router.patch("/:id/cancel", requireAuth, async (req, res) => {
 /**
  * PATCH /reservations/:id/reschedule
  * User – reschedule own reservation
- * - prevents rescheduling to same slot
- * - prevents duplicate booked reservation in target slot
- * - checks capacity of target slot
  */
 router.patch("/:id/reschedule", requireAuth, async (req, res) => {
   const userId = req.user!.id;
@@ -196,6 +234,9 @@ router.patch("/:id/reschedule", requireAuth, async (req, res) => {
   if (!toTimeSlotId) {
     return res.status(400).json({ error: "toTimeSlotId is required" });
   }
+
+  // ✅ keep profile email up-to-date
+  await syncCustomerProfile(userId, req.user?.email);
 
   try {
     const updated = await prisma.$transaction(async (tx) => {
@@ -210,11 +251,7 @@ router.patch("/:id/reschedule", requireAuth, async (req, res) => {
       }
 
       const duplicateInTarget = await tx.reservation.findFirst({
-        where: {
-          userId,
-          timeSlotId: toTimeSlotId,
-          status: "booked",
-        },
+        where: { userId, timeSlotId: toTimeSlotId, status: "booked" },
         select: { id: true },
       });
 
@@ -224,37 +261,27 @@ router.patch("/:id/reschedule", requireAuth, async (req, res) => {
 
       const slot = await tx.timeSlot.findUnique({
         where: { id: toTimeSlotId },
-        include: {
-          reservations: { where: { status: "booked" }, select: { id: true } },
-        },
+        include: { reservations: { where: { status: "booked" }, select: { id: true } } },
       });
 
-      if (!slot) {
-        throw { status: 404, message: "Target event not found" };
-      }
-
-      if (slot.reservations.length >= slot.capacity) {
-        throw { status: 409, message: "Target event is full" };
-      }
+      if (!slot) throw { status: 404, message: "Target event not found" };
+      if (slot.reservations.length >= slot.capacity) throw { status: 409, message: "Target event is full" };
 
       return tx.reservation.update({
         where: { id },
-        data: {
-          timeSlotId: toTimeSlotId,
-          status: "booked",
-        },
+        data: { timeSlotId: toTimeSlotId, status: "booked" },
       });
     });
 
-    res.json({
-      reservationId: updated.id,
-      timeSlotId: updated.timeSlotId,
-      status: updated.status,
+    // return full shape (with include)
+    const full = await prisma.reservation.findUnique({
+      where: { id: updated.id },
+      include: reservationInclude,
     });
+
+    res.json(full);
   } catch (err: any) {
-    res
-      .status(err.status ?? 500)
-      .json({ error: err.message ?? "Reschedule failed" });
+    res.status(err.status ?? 500).json({ error: err.message ?? "Reschedule failed" });
   }
 });
 

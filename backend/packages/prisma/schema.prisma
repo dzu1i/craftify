@@ -86,6 +86,8 @@ model CustomerProfile {
   email     String?
   fullName  String?
   createdAt DateTime @default(now())
+
+  reservations Reservation[]
 }
 
 model Reservation {
@@ -96,6 +98,7 @@ model Reservation {
   createdAt   DateTime          @default(now())
 
   timeSlot    TimeSlot          @relation(fields: [timeSlotId], references: [id])
+  customer    CustomerProfile?  @relation(fields: [userId], references: [userId])
 
   @@index([userId])
   @@index([timeSlotId])

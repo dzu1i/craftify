@@ -27,7 +27,7 @@ export interface UpdateEventData {
   endAt?: string;
   capacity?: number;
   price?: number;
-  status?: string; // pokud máte enum, necháme string
+  status?: string;
 }
 
 export type ApiError = {
@@ -37,7 +37,10 @@ export type ApiError = {
 };
 
 // Základní funkce pro volání backendových služeb
-async function fetchJson<T>(url: string, opts: RequestInit & { token?: string } = {}): Promise<T> {
+async function fetchJson<T>(
+  url: string,
+  opts: RequestInit & { token?: string } = {}
+): Promise<T> {
   const { token, headers, ...rest } = opts;
   const targetUrl = cleanUrl(url);
 
@@ -68,13 +71,19 @@ async function fetchJson<T>(url: string, opts: RequestInit & { token?: string } 
 
 // ---------- TYPES ----------
 export type Category = { id: string; name: string };
-export type Venue = { id: string; name: string; address?: string | null; city?: string | null };
+
+export type Venue = {
+  id: string;
+  name: string;
+  address?: string | null;
+  city?: string | null;
+};
 
 export type ClassType = {
   id: string;
   name: string;
   categoryId: string;
-  category?: Category;
+  category?: Category | null;
 };
 
 export type TimeSlot = {
@@ -88,10 +97,20 @@ export type TimeSlot = {
   capacity: number;
   price: number;
   status?: string;
-  classType?: ClassType;
-  venue?: Venue;
+
+  // backend teď často vrací nested data:
+  classType?: (ClassType & { category?: Category | null }) | null;
+  venue?: Venue | null;
+
+  // computed fields (pokud je někde používáš):
   bookedCount?: number;
   spotsLeft?: number;
+};
+
+export type CustomerProfile = {
+  userId: string;
+  email: string | null;
+  fullName: string | null;
 };
 
 export type Reservation = {
@@ -100,7 +119,19 @@ export type Reservation = {
   timeSlotId: string;
   status: "booked" | "canceled";
   createdAt: string;
-  timeSlot?: TimeSlot;
+
+  // ✅ NEW (from backend include)
+  customer?: CustomerProfile | null;
+
+  // ✅ backend teď vrací timeSlot vždy (include), ale necháme tolerantně optional,
+  // aby se ti nerozbily starší části FE, pokud někde používáš Reservation jinak.
+  timeSlot?: (TimeSlot & {
+    classType?: {
+      id: string;
+      name: string;
+      category?: Category | null;
+    } | null;
+  }) | null;
 };
 
 // ---------- HELPERS (Supabase reads) ----------
@@ -157,7 +188,10 @@ export const catalogApi = {
     }
   },
 
-  createClassType: async (token: string, payload: { name: string; categoryId: string }): Promise<ClassType> => {
+  createClassType: async (
+    token: string,
+    payload: { name: string; categoryId: string }
+  ): Promise<ClassType> => {
     try {
       return await fetchJson<ClassType>(`${CATALOG_URL}/classtypes`, {
         method: "POST",
@@ -196,7 +230,6 @@ export const catalogApi = {
       body: JSON.stringify(data),
     }),
 
-  // ⚠️ u vás je PATCH ok (pokud máte implementováno)
   updateEvent: (token: string, id: string, data: UpdateEventData): Promise<TimeSlot> =>
     fetchJson<TimeSlot>(`${CATALOG_URL}/events/${id}`, {
       method: "PATCH",
@@ -224,22 +257,21 @@ export const reservationApi = {
       body: JSON.stringify({ timeSlotId }),
     }),
 
-  // Cancel own reservation (pokud to máte)
+  // Cancel own reservation
   cancelMyReservation: (token: string, id: string): Promise<Reservation> =>
     fetchJson<Reservation>(`${RESERVATION_URL}/reservations/${id}/cancel`, {
       method: "PATCH",
       token,
     }),
 
-  // Admin cancel ✅ (tohle je vaše)
+  // Admin cancel ✅
   adminCancelReservation: (token: string, id: string): Promise<Reservation> =>
     fetchJson<Reservation>(`${RESERVATION_URL}/reservations/${id}/admin-cancel`, {
       method: "PATCH",
       token,
     }),
 
-  // 🔥 Alias aby sis nemusela přepisovat komponenty:
-  // "deleteReservation" ve skutečnosti jen provede admin-cancel (PATCH)
+  // Alias (delete = admin-cancel)
   deleteReservation: (token: string, id: string): Promise<Reservation> =>
     fetchJson<Reservation>(`${RESERVATION_URL}/reservations/${id}/admin-cancel`, {
       method: "PATCH",
