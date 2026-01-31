@@ -84,7 +84,7 @@ function LandingPage() {
         </div>
 
         <div className="mt-auto pt-12 flex flex-col lg:flex-row items-center gap-6 text-sm text-gray-500 lg:absolute lg:bottom-8 lg:left-24 lg:right-24">
-          <span>© 2025 Craftify</span>
+          <span>© 2026 Craftify</span>
         </div>
       </div>
     </div>
