@@ -30,7 +30,7 @@ export function auditLog(service: string) {
   return async (req: Request, _res: Response, next: NextFunction) => {
     await writeAudit({
       action: `${req.method} ${req.path}`,
-      actorId: req.user?.sub,
+      actorId: req.user?.id,
       meta: { service },
     });
     next();
