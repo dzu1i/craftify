@@ -5,6 +5,21 @@ import { catalogApi, reservationApi, type TimeSlot } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import TopNav from "../components/TopNav";
 
+const imageByCategory: Record<string, string> = {
+  "Dog photography":
+    "https://images.unsplash.com/photo-d2s8WPKgYFc?q=80&w=1200&auto=format&fit=crop",
+  Ceramics:
+    "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?q=80&w=1200&auto=format&fit=crop",
+};
+
+const fallbackImage =
+  "https://images.unsplash.com/photo-1523419409543-0b3bf4a1f9bb?q=80&w=1200&auto=format&fit=crop";
+
+function resolveEventImage(event: TimeSlot) {
+  const key = event.classType?.category?.name || event.classType?.name || "";
+  return (key && imageByCategory[key]) || fallbackImage;
+}
+
 function ClassDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -142,7 +157,7 @@ function ClassDetailPage() {
 
             <div className="rounded-[2.5rem] overflow-hidden h-[500px] mb-12 shadow-2xl shadow-orange-100 bg-gray-200 border-8 border-white">
               <img
-                src="https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?q=80&w=2070&auto=format&fit=crop"
+                src={resolveEventImage(event)}
                 className="w-full h-full object-cover"
                 alt=""
               />

@@ -4,6 +4,21 @@ import { useNavigate } from "react-router-dom";
 import { catalogApi, type TimeSlot, type Category } from "../lib/api";
 import TopNav from "../components/TopNav";
 
+const imageByCategory: Record<string, string> = {
+  "Dog photography":
+    "https://images.unsplash.com/photo-d2s8WPKgYFc?q=80&w=900&auto=format&fit=crop",
+  Ceramics:
+    "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?q=80&w=900&auto=format&fit=crop",
+};
+
+const fallbackImage =
+  "https://images.unsplash.com/photo-1523419409543-0b3bf4a1f9bb?q=80&w=900&auto=format&fit=crop";
+
+function resolveEventImage(event: TimeSlot) {
+  const key = event.classType?.category?.name || event.classType?.name || "";
+  return (key && imageByCategory[key]) || fallbackImage;
+}
+
 function CatalogPage() {
   const navigate = useNavigate();
 
@@ -136,7 +151,7 @@ function CatalogPage() {
               <div className="h-52 bg-gray-200 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                 <img
-                  src="https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?q=80&w=600&auto=format&fit=crop"
+                  src={resolveEventImage(event)}
                   alt={event.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
