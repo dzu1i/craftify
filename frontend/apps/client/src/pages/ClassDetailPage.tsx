@@ -126,7 +126,7 @@ function ClassDetailPage() {
     );
   }
 
-  const spotsLeft = (event as any).spotsLeft ?? event.capacity;
+  const spotsLeft = event.spotsLeft ?? event.capacity;
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans pb-20">
@@ -166,7 +166,7 @@ function ClassDetailPage() {
             <div className="prose max-w-none">
               <h3 className="text-2xl font-black text-gray-900 mb-6 italic">About this workshop</h3>
               <p className="text-xl leading-relaxed text-gray-600 font-medium">
-                {(event as any).description ||
+                {event.description ||
                   "Join us for an immersive crafting experience. All necessary tools and materials are provided on-site."}
               </p>
             </div>
