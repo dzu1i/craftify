@@ -6,6 +6,7 @@ import {
   Loader2,
   Calendar,
   User,
+  Menu,
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -22,6 +23,7 @@ export default function AdminDashboardPage() {
 
   const [stats, setStats] = useState({ bookings: 0, events: 0, revenue: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [allClassTypes, setAllClassTypes] = useState<ClassType[]>([]);
@@ -219,9 +221,35 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans">
+    <div className="flex min-h-screen bg-gray-50 font-sans">
+      {/* MOBILE TOP BAR */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white border-b border-gray-200 flex items-center justify-between px-4 py-3">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="p-2 rounded-lg hover:bg-gray-100"
+          aria-label="Open menu"
+        >
+          <Menu className="w-6 h-6 text-gray-700" />
+        </button>
+        <div className="font-bold text-gray-900">Craftify Admin</div>
+        <div className="w-10" />
+      </div>
+
+      {/* MOBILE OVERLAY */}
+      {mobileOpen && (
+        <button
+          className="lg:hidden fixed inset-0 bg-black/30 z-20"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Close menu"
+        />
+      )}
+
       {/* SIDEBAR */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full z-10">
+      <aside
+        className={`w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full z-30 transform transition-transform duration-200 ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0 lg:static lg:z-10`}
+      >
         <div className="p-6 flex items-center gap-3">
           <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center text-white font-bold">
             C
@@ -235,6 +263,7 @@ export default function AdminDashboardPage() {
           <Link
             to="/admin"
             className="flex items-center gap-3 w-full px-4 py-3 bg-orange-50 text-orange-600 rounded-lg text-sm font-medium"
+            onClick={() => setMobileOpen(false)}
           >
             <LayoutDashboard className="w-5 h-5" /> Dashboard
           </Link>
@@ -242,6 +271,7 @@ export default function AdminDashboardPage() {
           <Link
             to="/admin/reservations"
             className="flex items-center gap-3 w-full px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg text-sm font-medium transition-colors"
+            onClick={() => setMobileOpen(false)}
           >
             <Calendar className="w-5 h-5" /> Reservations
           </Link>
@@ -250,6 +280,7 @@ export default function AdminDashboardPage() {
           <Link
             to="/home"
             className="flex items-center gap-3 w-full px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg text-sm font-medium transition-colors"
+            onClick={() => setMobileOpen(false)}
           >
             <User className="w-5 h-5" /> User dashboard
           </Link>
@@ -265,7 +296,7 @@ export default function AdminDashboardPage() {
         </div>
       </aside>
 
-      <main className="flex-1 ml-64 p-8 overflow-auto">
+      <main className="flex-1 w-full lg:ml-64 p-4 pt-20 lg:p-8 overflow-auto">
         <div className="mb-8 flex justify-between items-end">
           <div>
             <h2 className="text-3xl font-black text-gray-900">
