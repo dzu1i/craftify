@@ -169,7 +169,7 @@ export default function AdminReservationsPage() {
         </div>
       </aside>
 
-      <main className="flex-1 w-full lg:ml-64 p-4 pt-20 lg:p-8 overflow-auto">
+      <main className="flex-1 w-full lg:ml-64 p-4 pt-20 lg:p-6 xl:p-8 overflow-auto">
         <div className="mb-8 flex justify-between items-end">
           <div>
             <h2 className="text-3xl font-black text-gray-900">Reservations</h2>
