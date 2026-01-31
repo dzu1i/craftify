@@ -7,7 +7,7 @@ import TopNav from "../components/TopNav";
 
 const imageByCategory: Record<string, string> = {
   "Dog photography":
-    "https://images.unsplash.com/photo-d2s8WPKgYFc?q=80&w=1200&auto=format&fit=crop",
+    "https://source.unsplash.com/d2s8WPKgYFc/1600x1000",
   Ceramics:
     "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?q=80&w=1200&auto=format&fit=crop",
 };
