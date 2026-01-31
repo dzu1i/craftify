@@ -71,3 +71,5 @@ export default defineConfig([
   },
 ])
 ```
+#to start the FE go to apps/client and in there run:
+npm run dev
