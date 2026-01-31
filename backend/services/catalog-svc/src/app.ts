@@ -11,7 +11,12 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
+const corsOrigins =
+  process.env.CORS_ORIGIN?.split(",").map((o) => o.trim()).filter(Boolean) ?? [];
+const corsConfig =
+  corsOrigins.length > 0 ? { origin: corsOrigins, credentials: true } : undefined;
+
+app.use(cors(corsConfig));
 app.use(express.json());
 
 app.use((req, _res, next) => {
