@@ -139,7 +139,7 @@ export default function AdminReservationsPage() {
             className="flex items-center gap-3 w-full px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg text-sm font-medium transition-colors"
             onClick={() => setMobileOpen(false)}
           >
-            <LayoutDashboard className="w-5 h-5" /> Create a new class
+            <LayoutDashboard className="w-5 h-5" /> Dashboard
           </Link>
 
           <Link
