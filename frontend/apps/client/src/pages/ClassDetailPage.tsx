@@ -4,10 +4,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { catalogApi, reservationApi, type TimeSlot } from "../lib/api";
 import { supabase } from "../lib/supabase";
 import TopNav from "../components/TopNav";
+import dogImage from "../assets/dog.jpg";
 
 const imageByCategory: Record<string, string> = {
-  "Dog photography":
-    "https://source.unsplash.com/d2s8WPKgYFc/1600x1000",
+  "Dog photography": dogImage,
   Ceramics:
     "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?q=80&w=1200&auto=format&fit=crop",
 };

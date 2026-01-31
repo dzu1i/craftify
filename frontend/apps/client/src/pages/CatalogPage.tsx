@@ -3,10 +3,10 @@ import { Search, MapPin, Calendar, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { catalogApi, type TimeSlot, type Category } from "../lib/api";
 import TopNav from "../components/TopNav";
+import dogImage from "../assets/dog.jpg";
 
 const imageByCategory: Record<string, string> = {
-  "Dog photography":
-    "https://source.unsplash.com/d2s8WPKgYFc/900x600",
+  "Dog photography": dogImage,
   Ceramics:
     "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?q=80&w=900&auto=format&fit=crop",
 };
