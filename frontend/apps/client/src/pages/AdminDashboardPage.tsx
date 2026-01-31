@@ -251,7 +251,7 @@ export default function AdminDashboardPage() {
             to="/home"
             className="flex items-center gap-3 w-full px-4 py-3 text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg text-sm font-medium transition-colors"
           >
-            <User className="w-5 h-5" /> My reservations
+            <User className="w-5 h-5" /> User dashboard
           </Link>
         </nav>
 
