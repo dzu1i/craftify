@@ -168,7 +168,7 @@ function CatalogPage() {
                 <div className="space-y-2 mb-6">
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Calendar className="w-4 h-4 text-orange-400" />
-                    {new Date(event.startAt).toLocaleDateString("cs-CZ", {
+                    {new Date(event.startAt).toLocaleDateString("en-US", {
                       weekday: "short",
                       day: "numeric",
                       month: "short",

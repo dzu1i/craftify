@@ -187,7 +187,7 @@ function ClassDetailPage() {
                   <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</p>
                     <p className="font-bold text-gray-700">
-                      {new Date(event.startAt).toLocaleDateString("cs-CZ", {
+                      {new Date(event.startAt).toLocaleDateString("en-US", {
                         weekday: "long",
                         day: "numeric",
                         month: "long",
